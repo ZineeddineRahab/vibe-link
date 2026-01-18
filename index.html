@@ -267,6 +267,32 @@
             opacity: 0.3;
             pointer-events: none;
         }
+
+        .tap-controls {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+        }
+
+        .tap-control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tap-control-btn:active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -317,6 +343,11 @@
             <div class="black-screen-content">
                 <div class="pulse-indicator"></div>
                 <div class="tap-counter" id="tapCounter">0</div>
+                <div class="tap-controls">
+                    <button class="tap-control-btn" id="decreaseBtn">-1</button>
+                    <button class="tap-control-btn" id="resetBtn">Reset</button>
+                    <button class="tap-control-btn" id="increaseBtn">+1</button>
+                </div>
             </div>
         </div>
 
@@ -366,7 +397,10 @@
             blackScreen: document.getElementById('blackScreen'),
             pulseIndicator: document.querySelector('.pulse-indicator'),
             questionCount: document.getElementById('questionCount'),
-            tapCounter: document.getElementById('tapCounter')
+            tapCounter: document.getElementById('tapCounter'),
+            decreaseBtn: document.getElementById('decreaseBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+            increaseBtn: document.getElementById('increaseBtn')
         };
 
         // Generate random room ID on load
@@ -517,7 +551,12 @@
         });
 
         // Handle taps on black screen
-        elements.blackScreen.addEventListener('click', async () => {
+        elements.blackScreen.addEventListener('click', async (e) => {
+            // Ignore clicks on buttons
+            if (e.target.classList.contains('tap-control-btn')) {
+                return;
+            }
+
             if (isReceiverActive && currentMode === 'receiver' && currentRoom) {
                 tapCount++;
                 elements.tapCounter.textContent = tapCount;
@@ -532,6 +571,49 @@
                 if (navigator.vibrate) {
                     navigator.vibrate(50);
                 }
+            }
+        });
+
+        // Update tap count function
+        async function updateTapCount(newCount) {
+            if (newCount < 0) newCount = 0;
+            
+            tapCount = newCount;
+            elements.tapCounter.textContent = tapCount;
+            
+            if (currentRoom) {
+                const tapCountRef = ref(database, `rooms/${currentRoom}/tapCount`);
+                await set(tapCountRef, tapCount);
+                addLog(`Tap count updated: ${tapCount}`);
+            }
+            
+            // Brief vibration feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        // Decrease button
+        elements.decreaseBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (isReceiverActive && currentMode === 'receiver') {
+                await updateTapCount(tapCount - 1);
+            }
+        });
+
+        // Reset button
+        elements.resetBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (isReceiverActive && currentMode === 'receiver') {
+                await updateTapCount(0);
+            }
+        });
+
+        // Increase button
+        elements.increaseBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (isReceiverActive && currentMode === 'receiver') {
+                await updateTapCount(tapCount + 1);
             }
         });
     </script>
