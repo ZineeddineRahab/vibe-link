@@ -277,6 +277,28 @@
             font-size: 14px;
             text-align: center;
         }
+
+        .swipe-hint {
+            position: absolute;
+            top: 50%;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+
+        .swipe-hint.left {
+            left: 30px;
+        }
+
+        .swipe-hint.right {
+            right: 30px;
+        }
+
+        .swipe-hint.active {
+            color: rgba(255, 255, 255, 0.8);
+            transform: scale(1.5);
+        }
     </style>
 </head>
 <body>
@@ -326,8 +348,10 @@
         <div id="blackScreen" class="hidden">
             <div class="black-screen-content">
                 <div class="pulse-indicator"></div>
+                <div class="swipe-hint left" id="swipeLeft">←</div>
                 <div class="tap-counter" id="tapCounter">0</div>
-                <div class="instructions">Use Volume Buttons: Up (+1) | Down (-1)</div>
+                <div class="swipe-hint right" id="swipeRight">→</div>
+                <div class="instructions">Swipe Right (+1) | Swipe Left (-1)</div>
             </div>
         </div>
 
@@ -377,7 +401,9 @@
             blackScreen: document.getElementById('blackScreen'),
             pulseIndicator: document.querySelector('.pulse-indicator'),
             questionCount: document.getElementById('questionCount'),
-            tapCounter: document.getElementById('tapCounter')
+            tapCounter: document.getElementById('tapCounter'),
+            swipeLeft: document.getElementById('swipeLeft'),
+            swipeRight: document.getElementById('swipeRight')
         };
 
         // Generate random room ID on load
@@ -527,10 +553,9 @@
             }, 500);
         });
 
-        // Handle taps on black screen (disabled, using volume buttons instead)
+        // Handle taps on black screen (disabled)
         elements.blackScreen.addEventListener('click', async (e) => {
-            // Tapping screen no longer increases count
-            // Volume buttons are used instead
+            // Tapping disabled, using swipe gestures instead
         });
 
         // Update tap count function
@@ -552,21 +577,44 @@
             }
         }
 
-        // Listen for volume button presses
-        document.addEventListener('keydown', async (e) => {
+        // Swipe gesture detection
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const minSwipeDistance = 50; // Minimum distance for a swipe
+
+        elements.blackScreen.addEventListener('touchstart', (e) => {
             if (isReceiverActive && currentMode === 'receiver') {
-                // Volume Up button (usually mapped to ArrowUp or specific key codes)
-                if (e.key === 'ArrowUp' || e.key === 'VolumeUp' || e.keyCode === 38 || e.keyCode === 175) {
-                    e.preventDefault();
-                    await updateTapCount(tapCount + 1);
-                }
-                // Volume Down button (usually mapped to ArrowDown or specific key codes)
-                else if (e.key === 'ArrowDown' || e.key === 'VolumeDown' || e.keyCode === 40 || e.keyCode === 174) {
-                    e.preventDefault();
-                    await updateTapCount(tapCount - 1);
-                }
+                touchStartX = e.changedTouches[0].screenX;
             }
-        });
+        }, false);
+
+        elements.blackScreen.addEventListener('touchend', async (e) => {
+            if (isReceiverActive && currentMode === 'receiver') {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }
+        }, false);
+
+        async function handleSwipe() {
+            const swipeDistance = touchEndX - touchStartX;
+            
+            // Swipe right (increase)
+            if (swipeDistance > minSwipeDistance) {
+                elements.swipeRight.classList.add('active');
+                await updateTapCount(tapCount + 1);
+                setTimeout(() => {
+                    elements.swipeRight.classList.remove('active');
+                }, 300);
+            }
+            // Swipe left (decrease)
+            else if (swipeDistance < -minSwipeDistance) {
+                elements.swipeLeft.classList.add('active');
+                await updateTapCount(tapCount - 1);
+                setTimeout(() => {
+                    elements.swipeLeft.classList.remove('active');
+                }, 300);
+            }
+        }
     </script>
 </body>
 </html>
