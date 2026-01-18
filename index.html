@@ -188,6 +188,41 @@
             padding-left: 10px;
         }
 
+        #blackScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #blackScreen.hidden {
+            display: none;
+        }
+
+        .black-screen-content {
+            text-align: center;
+        }
+
+        .pulse-indicator {
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .pulse-indicator.active {
+            opacity: 1;
+            animation: pulse 0.5s ease-in-out;
+        }
+
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -235,9 +270,15 @@
                 <div class="section">
                     <div class="section-title">Receiver Mode</div>
                     <button class="btn-success btn-full" id="startReceiverBtn">Start Receiver</button>
-                    <div class="vibration-count hidden" id="vibrationDisplay">0</div>
                 </div>
             </div>
+        </div>
+
+        <div id="blackScreen" class="hidden">
+            <div class="black-screen-content">
+                <div class="pulse-indicator"></div>
+            </div>
+        </div>
 
             <div class="section">
                 <div class="section-title">Activity Log</div>
@@ -281,7 +322,9 @@
             sendBtn: document.getElementById('sendBtn'),
             startReceiverBtn: document.getElementById('startReceiverBtn'),
             vibrationDisplay: document.getElementById('vibrationDisplay'),
-            log: document.getElementById('log')
+            log: document.getElementById('log'),
+            blackScreen: document.getElementById('blackScreen'),
+            pulseIndicator: document.querySelector('.pulse-indicator')
         };
 
         // Generate random room ID on load
@@ -312,20 +355,19 @@
                 return;
             }
 
-            elements.vibrationDisplay.textContent = count;
-            elements.vibrationDisplay.classList.remove('hidden');
-            elements.vibrationDisplay.classList.add('vibrating');
-
             addLog(`Vibrating ${count} times...`);
 
             for (let i = 0; i < count; i++) {
+                // Show pulse indicator on black screen
+                elements.pulseIndicator.classList.add('active');
+                
                 navigator.vibrate(200);
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Hide pulse indicator
+                elements.pulseIndicator.classList.remove('active');
+                await new Promise(resolve => setTimeout(resolve, 200));
             }
-
-            setTimeout(() => {
-                elements.vibrationDisplay.classList.remove('vibrating');
-            }, 300);
 
             addLog('Vibration complete');
         }
@@ -407,16 +449,18 @@
             }
 
             isReceiverActive = true;
-            elements.startReceiverBtn.textContent = 'Receiver Active ✓';
-            elements.startReceiverBtn.classList.remove('btn-success');
-            elements.startReceiverBtn.style.background = '#38a169';
-            addLog('Receiver activated - waiting for vibration commands...');
+            addLog('Receiver activated - entering black screen mode...');
 
             // Test vibration to ensure it works
             if (navigator.vibrate) {
                 navigator.vibrate(100);
                 addLog('Test vibration sent');
             }
+
+            // Show black screen
+            setTimeout(() => {
+                elements.blackScreen.classList.remove('hidden');
+            }, 500);
         });
     </script>
 </body>
