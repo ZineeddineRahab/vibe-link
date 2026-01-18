@@ -267,38 +267,6 @@
             opacity: 0.3;
             pointer-events: none;
         }
-
-        .instructions {
-            position: absolute;
-            bottom: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .swipe-hint {
-            position: absolute;
-            top: 50%;
-            font-size: 24px;
-            color: rgba(255, 255, 255, 0.3);
-            pointer-events: none;
-            transition: all 0.3s;
-        }
-
-        .swipe-hint.left {
-            left: 30px;
-        }
-
-        .swipe-hint.right {
-            right: 30px;
-        }
-
-        .swipe-hint.active {
-            color: rgba(255, 255, 255, 0.8);
-            transform: scale(1.5);
-        }
     </style>
 </head>
 <body>
@@ -348,10 +316,7 @@
         <div id="blackScreen" class="hidden">
             <div class="black-screen-content">
                 <div class="pulse-indicator"></div>
-                <div class="swipe-hint left" id="swipeLeft">←</div>
                 <div class="tap-counter" id="tapCounter">0</div>
-                <div class="swipe-hint right" id="swipeRight">→</div>
-                <div class="instructions">Swipe Right (+1) | Swipe Left (-1)</div>
             </div>
         </div>
 
@@ -401,9 +366,7 @@
             blackScreen: document.getElementById('blackScreen'),
             pulseIndicator: document.querySelector('.pulse-indicator'),
             questionCount: document.getElementById('questionCount'),
-            tapCounter: document.getElementById('tapCounter'),
-            swipeLeft: document.getElementById('swipeLeft'),
-            swipeRight: document.getElementById('swipeRight')
+            tapCounter: document.getElementById('tapCounter')
         };
 
         // Generate random room ID on load
@@ -553,68 +516,24 @@
             }, 500);
         });
 
-        // Handle taps on black screen (disabled)
-        elements.blackScreen.addEventListener('click', async (e) => {
-            // Tapping disabled, using swipe gestures instead
-        });
-
-        // Update tap count function
-        async function updateTapCount(newCount) {
-            if (newCount < 0) newCount = 0;
-            
-            tapCount = newCount;
-            elements.tapCounter.textContent = tapCount;
-            
-            if (currentRoom) {
+        // Handle taps on black screen
+        elements.blackScreen.addEventListener('click', async () => {
+            if (isReceiverActive && currentMode === 'receiver' && currentRoom) {
+                tapCount++;
+                elements.tapCounter.textContent = tapCount;
+                
+                // Send tap count to Firebase
                 const tapCountRef = ref(database, `rooms/${currentRoom}/tapCount`);
                 await set(tapCountRef, tapCount);
-                addLog(`Question count: ${tapCount}`);
+                
+                addLog(`Tap registered: ${tapCount}`);
+                
+                // Brief vibration feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
             }
-            
-            // Brief vibration feedback
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
-        }
-
-        // Swipe gesture detection
-        let touchStartX = 0;
-        let touchEndX = 0;
-        const minSwipeDistance = 50; // Minimum distance for a swipe
-
-        elements.blackScreen.addEventListener('touchstart', (e) => {
-            if (isReceiverActive && currentMode === 'receiver') {
-                touchStartX = e.changedTouches[0].screenX;
-            }
-        }, false);
-
-        elements.blackScreen.addEventListener('touchend', async (e) => {
-            if (isReceiverActive && currentMode === 'receiver') {
-                touchEndX = e.changedTouches[0].screenX;
-                handleSwipe();
-            }
-        }, false);
-
-        async function handleSwipe() {
-            const swipeDistance = touchEndX - touchStartX;
-            
-            // Swipe right (increase)
-            if (swipeDistance > minSwipeDistance) {
-                elements.swipeRight.classList.add('active');
-                await updateTapCount(tapCount + 1);
-                setTimeout(() => {
-                    elements.swipeRight.classList.remove('active');
-                }, 300);
-            }
-            // Swipe left (decrease)
-            else if (swipeDistance < -minSwipeDistance) {
-                elements.swipeLeft.classList.add('active');
-                await updateTapCount(tapCount - 1);
-                setTimeout(() => {
-                    elements.swipeLeft.classList.remove('active');
-                }, 300);
-            }
-        }
+        });
     </script>
 </body>
 </html>
