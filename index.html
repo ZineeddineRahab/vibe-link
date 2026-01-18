@@ -268,30 +268,14 @@
             pointer-events: none;
         }
 
-        .tap-controls {
+        .instructions {
             position: absolute;
             bottom: 50px;
             left: 50%;
             transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-        }
-
-        .tap-control-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .tap-control-btn:active {
-            background: rgba(255, 255, 255, 0.4);
-            transform: scale(0.95);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            text-align: center;
         }
     </style>
 </head>
@@ -343,11 +327,7 @@
             <div class="black-screen-content">
                 <div class="pulse-indicator"></div>
                 <div class="tap-counter" id="tapCounter">0</div>
-                <div class="tap-controls">
-                    <button class="tap-control-btn" id="decreaseBtn">-1</button>
-                    <button class="tap-control-btn" id="resetBtn">Reset</button>
-                    <button class="tap-control-btn" id="increaseBtn">+1</button>
-                </div>
+                <div class="instructions">Use Volume Buttons: Up (+1) | Down (-1)</div>
             </div>
         </div>
 
@@ -397,10 +377,7 @@
             blackScreen: document.getElementById('blackScreen'),
             pulseIndicator: document.querySelector('.pulse-indicator'),
             questionCount: document.getElementById('questionCount'),
-            tapCounter: document.getElementById('tapCounter'),
-            decreaseBtn: document.getElementById('decreaseBtn'),
-            resetBtn: document.getElementById('resetBtn'),
-            increaseBtn: document.getElementById('increaseBtn')
+            tapCounter: document.getElementById('tapCounter')
         };
 
         // Generate random room ID on load
@@ -550,28 +527,10 @@
             }, 500);
         });
 
-        // Handle taps on black screen
+        // Handle taps on black screen (disabled, using volume buttons instead)
         elements.blackScreen.addEventListener('click', async (e) => {
-            // Ignore clicks on buttons
-            if (e.target.classList.contains('tap-control-btn')) {
-                return;
-            }
-
-            if (isReceiverActive && currentMode === 'receiver' && currentRoom) {
-                tapCount++;
-                elements.tapCounter.textContent = tapCount;
-                
-                // Send tap count to Firebase
-                const tapCountRef = ref(database, `rooms/${currentRoom}/tapCount`);
-                await set(tapCountRef, tapCount);
-                
-                addLog(`Tap registered: ${tapCount}`);
-                
-                // Brief vibration feedback
-                if (navigator.vibrate) {
-                    navigator.vibrate(50);
-                }
-            }
+            // Tapping screen no longer increases count
+            // Volume buttons are used instead
         });
 
         // Update tap count function
@@ -584,7 +543,7 @@
             if (currentRoom) {
                 const tapCountRef = ref(database, `rooms/${currentRoom}/tapCount`);
                 await set(tapCountRef, tapCount);
-                addLog(`Tap count updated: ${tapCount}`);
+                addLog(`Question count: ${tapCount}`);
             }
             
             // Brief vibration feedback
@@ -593,27 +552,19 @@
             }
         }
 
-        // Decrease button
-        elements.decreaseBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
+        // Listen for volume button presses
+        document.addEventListener('keydown', async (e) => {
             if (isReceiverActive && currentMode === 'receiver') {
-                await updateTapCount(tapCount - 1);
-            }
-        });
-
-        // Reset button
-        elements.resetBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (isReceiverActive && currentMode === 'receiver') {
-                await updateTapCount(0);
-            }
-        });
-
-        // Increase button
-        elements.increaseBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (isReceiverActive && currentMode === 'receiver') {
-                await updateTapCount(tapCount + 1);
+                // Volume Up button (usually mapped to ArrowUp or specific key codes)
+                if (e.key === 'ArrowUp' || e.key === 'VolumeUp' || e.keyCode === 38 || e.keyCode === 175) {
+                    e.preventDefault();
+                    await updateTapCount(tapCount + 1);
+                }
+                // Volume Down button (usually mapped to ArrowDown or specific key codes)
+                else if (e.key === 'ArrowDown' || e.key === 'VolumeDown' || e.keyCode === 40 || e.keyCode === 174) {
+                    e.preventDefault();
+                    await updateTapCount(tapCount - 1);
+                }
             }
         });
     </script>
