@@ -310,6 +310,18 @@
                     <div class="section-title">Receiver Mode</div>
                     <button class="btn-success btn-full" id="startReceiverBtn">Start Receiver</button>
                 </div>
+
+                <div class="section">
+                    <div class="section-title">Vibration Settings</div>
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-size: 14px; color: #666;">Tap Feedback: <span id="tapVibeValue">50ms</span></label>
+                        <input type="range" id="tapVibeSlider" min="0" max="200" value="50" style="width: 100%; margin-top: 5px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 14px; color: #666;">Command Vibration: <span id="cmdVibeValue">200ms</span></label>
+                        <input type="range" id="cmdVibeSlider" min="0" max="500" value="200" style="width: 100%; margin-top: 5px;">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -348,6 +360,8 @@
         let isReceiverActive = false;
         let currentMode = 'host';
         let tapCount = 0;
+        let tapVibeDuration = 50; // Tap feedback vibration duration
+        let cmdVibeDuration = 200; // Command vibration duration
 
         const elements = {
             status: document.getElementById('status'),
@@ -366,7 +380,11 @@
             blackScreen: document.getElementById('blackScreen'),
             pulseIndicator: document.querySelector('.pulse-indicator'),
             questionCount: document.getElementById('questionCount'),
-            tapCounter: document.getElementById('tapCounter')
+            tapCounter: document.getElementById('tapCounter'),
+            tapVibeSlider: document.getElementById('tapVibeSlider'),
+            tapVibeValue: document.getElementById('tapVibeValue'),
+            cmdVibeSlider: document.getElementById('cmdVibeSlider'),
+            cmdVibeValue: document.getElementById('cmdVibeValue')
         };
 
         // Generate random room ID on load
@@ -403,8 +421,8 @@
                 // Show pulse indicator on black screen
                 elements.pulseIndicator.classList.add('active');
                 
-                navigator.vibrate(200);
-                await new Promise(resolve => setTimeout(resolve, 300));
+                navigator.vibrate(cmdVibeDuration);
+                await new Promise(resolve => setTimeout(resolve, cmdVibeDuration + 100));
                 
                 // Hide pulse indicator
                 elements.pulseIndicator.classList.remove('active');
@@ -516,6 +534,17 @@
             }, 500);
         });
 
+        // Vibration control sliders
+        elements.tapVibeSlider.addEventListener('input', (e) => {
+            tapVibeDuration = parseInt(e.target.value);
+            elements.tapVibeValue.textContent = tapVibeDuration === 0 ? 'Off' : `${tapVibeDuration}ms`;
+        });
+
+        elements.cmdVibeSlider.addEventListener('input', (e) => {
+            cmdVibeDuration = parseInt(e.target.value);
+            elements.cmdVibeValue.textContent = cmdVibeDuration === 0 ? 'Off' : `${cmdVibeDuration}ms`;
+        });
+
         // Handle taps on black screen
         elements.blackScreen.addEventListener('click', async () => {
             if (isReceiverActive && currentMode === 'receiver' && currentRoom) {
@@ -528,9 +557,9 @@
                 
                 addLog(`Tap registered: ${tapCount}`);
                 
-                // Brief vibration feedback
-                if (navigator.vibrate) {
-                    navigator.vibrate(50);
+                // Brief vibration feedback with custom duration
+                if (navigator.vibrate && tapVibeDuration > 0) {
+                    navigator.vibrate(tapVibeDuration);
                 }
             }
         });
