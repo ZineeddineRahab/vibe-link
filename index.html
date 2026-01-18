@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibration Controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .status-disconnected {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .status-connected {
+            background: #c6f6d5;
+            color: #2f855a;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            background: #f7fafc;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .vibration-count {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .log {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .log-item {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .vibrating {
+            animation: pulse 0.3s ease-in-out;
+            background: #667eea !important;
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📳 Vibration Controller</h1>
+        <p class="subtitle">Control vibrations across devices in real-time</p>
+
+        <div class="status status-disconnected" id="status">Disconnected</div>
+
+        <div class="section">
+            <div class="section-title">Room Connection</div>
+            <div class="input-group">
+                <input type="text" id="roomId" placeholder="Enter Room ID" value="">
+                <button class="btn-primary" id="connectBtn">Connect</button>
+            </div>
+        </div>
+
+        <div id="connectedPanel" class="hidden">
+            <div class="mode-selector">
+                <button class="mode-btn active" id="hostBtn">Host</button>
+                <button class="mode-btn" id="receiverBtn">Receiver</button>
+            </div>
+
+            <div id="hostPanel">
+                <div class="section">
+                    <div class="section-title">Send Vibration</div>
+                    <div class="input-group">
+                        <input type="number" id="vibrationCount" placeholder="Number of vibrations" min="1" max="10" value="3">
+                        <button class="btn-primary" id="sendBtn">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="receiverPanel" class="hidden">
+                <div class="section">
+                    <div class="section-title">Receiver Mode</div>
+                    <button class="btn-success btn-full" id="startReceiverBtn">Start Receiver</button>
+                    <div class="vibration-count hidden" id="vibrationDisplay">0</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Activity Log</div>
+                <div class="log" id="log"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, onValue, set, push } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA3R8w_-qvJwO9TJXKZmKxndhvV1EPvPl0",
+            authDomain: "vibr-37cd7.firebaseapp.com",
+            databaseURL: "https://vibr-37cd7-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "vibr-37cd7",
+            storageBucket: "vibr-37cd7.firebasestorage.app",
+            messagingSenderId: "870398814602",
+            appId: "1:870398814602:web:ad48907e75ceba28020073"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        let currentRoom = null;
+        let isReceiverActive = false;
+        let currentMode = 'host';
+
+        const elements = {
+            status: document.getElementById('status'),
+            roomId: document.getElementById('roomId'),
+            connectBtn: document.getElementById('connectBtn'),
+            connectedPanel: document.getElementById('connectedPanel'),
+            hostPanel: document.getElementById('hostPanel'),
+            receiverPanel: document.getElementById('receiverPanel'),
+            hostBtn: document.getElementById('hostBtn'),
+            receiverBtn: document.getElementById('receiverBtn'),
+            vibrationCount: document.getElementById('vibrationCount'),
+            sendBtn: document.getElementById('sendBtn'),
+            startReceiverBtn: document.getElementById('startReceiverBtn'),
+            vibrationDisplay: document.getElementById('vibrationDisplay'),
+            log: document.getElementById('log')
+        };
+
+        // Generate random room ID on load
+        elements.roomId.value = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        function addLog(message) {
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            const time = new Date().toLocaleTimeString();
+            logItem.textContent = `[${time}] ${message}`;
+            elements.log.insertBefore(logItem, elements.log.firstChild);
+        }
+
+        function updateStatus(connected) {
+            if (connected) {
+                elements.status.className = 'status status-connected';
+                elements.status.textContent = `Connected to Room: ${currentRoom}`;
+            } else {
+                elements.status.className = 'status status-disconnected';
+                elements.status.textContent = 'Disconnected';
+            }
+        }
+
+        async function vibrateDevice(count) {
+            if (!navigator.vibrate) {
+                addLog('Vibration API not supported on this device');
+                alert('Vibration not supported on this device');
+                return;
+            }
+
+            elements.vibrationDisplay.textContent = count;
+            elements.vibrationDisplay.classList.remove('hidden');
+            elements.vibrationDisplay.classList.add('vibrating');
+
+            addLog(`Vibrating ${count} times...`);
+
+            for (let i = 0; i < count; i++) {
+                navigator.vibrate(200);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            setTimeout(() => {
+                elements.vibrationDisplay.classList.remove('vibrating');
+            }, 300);
+
+            addLog('Vibration complete');
+        }
+
+        elements.connectBtn.addEventListener('click', () => {
+            const roomId = elements.roomId.value.trim();
+            if (!roomId) {
+                alert('Please enter a Room ID');
+                return;
+            }
+
+            currentRoom = roomId;
+            const messagesRef = ref(database, `rooms/${currentRoom}/messages`);
+
+            onValue(messagesRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const messages = Object.values(data);
+                    const latestMessage = messages[messages.length - 1];
+                    
+                    if (latestMessage && isReceiverActive && currentMode === 'receiver') {
+                        const count = parseInt(latestMessage.count);
+                        if (count > 0) {
+                            vibrateDevice(count);
+                        }
+                    }
+                }
+            });
+
+            updateStatus(true);
+            elements.connectedPanel.classList.remove('hidden');
+            addLog(`Connected to room: ${roomId}`);
+        });
+
+        elements.hostBtn.addEventListener('click', () => {
+            currentMode = 'host';
+            elements.hostBtn.classList.add('active');
+            elements.receiverBtn.classList.remove('active');
+            elements.hostPanel.classList.remove('hidden');
+            elements.receiverPanel.classList.add('hidden');
+            isReceiverActive = false;
+            addLog('Switched to Host mode');
+        });
+
+        elements.receiverBtn.addEventListener('click', () => {
+            currentMode = 'receiver';
+            elements.receiverBtn.classList.add('active');
+            elements.hostBtn.classList.remove('active');
+            elements.receiverPanel.classList.remove('hidden');
+            elements.hostPanel.classList.add('hidden');
+            addLog('Switched to Receiver mode');
+        });
+
+        elements.sendBtn.addEventListener('click', async () => {
+            if (!currentRoom) {
+                alert('Please connect to a room first');
+                return;
+            }
+
+            const count = parseInt(elements.vibrationCount.value);
+            if (isNaN(count) || count < 1 || count > 10) {
+                alert('Please enter a number between 1 and 10');
+                return;
+            }
+
+            const messagesRef = ref(database, `rooms/${currentRoom}/messages`);
+            await push(messagesRef, {
+                count: count,
+                timestamp: Date.now()
+            });
+
+            addLog(`Sent vibration command: ${count} times`);
+        });
+
+        elements.startReceiverBtn.addEventListener('click', () => {
+            if (!currentRoom) {
+                alert('Please connect to a room first');
+                return;
+            }
+
+            isReceiverActive = true;
+            elements.startReceiverBtn.textContent = 'Receiver Active ✓';
+            elements.startReceiverBtn.classList.remove('btn-success');
+            elements.startReceiverBtn.style.background = '#38a169';
+            addLog('Receiver activated - waiting for vibration commands...');
+
+            // Test vibration to ensure it works
+            if (navigator.vibrate) {
+                navigator.vibrate(100);
+                addLog('Test vibration sent');
+            }
+        });
+    </script>
+</body>
+</html>
