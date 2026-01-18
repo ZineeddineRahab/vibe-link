@@ -233,6 +233,40 @@
             background: #667eea !important;
             color: white !important;
         }
+
+        .question-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .question-title {
+            font-size: 14px;
+            color: #856404;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .question-count {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ffc107;
+        }
+
+        .tap-counter {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 72px;
+            font-weight: bold;
+            opacity: 0.3;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -264,6 +298,11 @@
                         <button class="btn-primary" id="sendBtn">Send</button>
                     </div>
                 </div>
+
+                <div class="question-box" id="questionBox">
+                    <div class="question-title">Number of Questions</div>
+                    <div class="question-count" id="questionCount">0</div>
+                </div>
             </div>
 
             <div id="receiverPanel" class="hidden">
@@ -277,13 +316,13 @@
         <div id="blackScreen" class="hidden">
             <div class="black-screen-content">
                 <div class="pulse-indicator"></div>
+                <div class="tap-counter" id="tapCounter">0</div>
             </div>
         </div>
 
-            <div class="section">
-                <div class="section-title">Activity Log</div>
-                <div class="log" id="log"></div>
-            </div>
+        <div class="section">
+            <div class="section-title">Activity Log</div>
+            <div class="log" id="log"></div>
         </div>
     </div>
 
@@ -308,6 +347,7 @@
         let currentRoom = null;
         let isReceiverActive = false;
         let currentMode = 'host';
+        let tapCount = 0;
 
         const elements = {
             status: document.getElementById('status'),
@@ -324,7 +364,9 @@
             vibrationDisplay: document.getElementById('vibrationDisplay'),
             log: document.getElementById('log'),
             blackScreen: document.getElementById('blackScreen'),
-            pulseIndicator: document.querySelector('.pulse-indicator')
+            pulseIndicator: document.querySelector('.pulse-indicator'),
+            questionCount: document.getElementById('questionCount'),
+            tapCounter: document.getElementById('tapCounter')
         };
 
         // Generate random room ID on load
@@ -397,6 +439,15 @@
                 }
             });
 
+            // Listen for tap counts from receiver
+            const tapCountRef = ref(database, `rooms/${currentRoom}/tapCount`);
+            onValue(tapCountRef, (snapshot) => {
+                const count = snapshot.val();
+                if (count !== null && currentMode === 'host') {
+                    elements.questionCount.textContent = count;
+                }
+            });
+
             updateStatus(true);
             elements.connectedPanel.classList.remove('hidden');
             addLog(`Connected to room: ${roomId}`);
@@ -449,6 +500,8 @@
             }
 
             isReceiverActive = true;
+            tapCount = 0;
+            elements.tapCounter.textContent = tapCount;
             addLog('Receiver activated - entering black screen mode...');
 
             // Test vibration to ensure it works
@@ -461,6 +514,25 @@
             setTimeout(() => {
                 elements.blackScreen.classList.remove('hidden');
             }, 500);
+        });
+
+        // Handle taps on black screen
+        elements.blackScreen.addEventListener('click', async () => {
+            if (isReceiverActive && currentMode === 'receiver' && currentRoom) {
+                tapCount++;
+                elements.tapCounter.textContent = tapCount;
+                
+                // Send tap count to Firebase
+                const tapCountRef = ref(database, `rooms/${currentRoom}/tapCount`);
+                await set(tapCountRef, tapCount);
+                
+                addLog(`Tap registered: ${tapCount}`);
+                
+                // Brief vibration feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+            }
         });
     </script>
 </body>
